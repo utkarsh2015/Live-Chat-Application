@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Live Chat</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 20px; }
+        #chat-box { width: 400px; height: 300px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9; }
+        #message-input { width: 300px; padding: 8px; border: 1px solid #aaa; }
+        #send-button { padding: 8px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        .message { margin-bottom: 5px; padding: 5px; border-radius: 5px; max-width: 80%; }
+        .message.mine { background-color: #d1e7ff; align-self: flex-end; }
+        .message.other { background-color: #e9ecef; align-self: flex-start; }
+    </style>
+</head>
+<body>
+    <h1>Simple Live Chat</h1>
+    <div id="chat-box">
+        </div>
+    <div>
+        <input type="text" id="message-input" placeholder="Type your message...">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+
+        // *** IMPORTANT: This is the WebSocket part ***
+        // You need a server running at this address (e.g., ws://localhost:8080)
+        // to handle the real-time communication.
+        const socket = new WebSocket('ws://localhost:8080'); 
+
+        // 1. Connection Opened
+        socket.onopen = function(e) {
+            console.log("[open] Connection established");
+            displayMessage("System: Connected to chat.", 'system');
+        };
+
+        // 2. Message Received
+        socket.onmessage = function(event) {
+            // Assume the server sends back messages as a string
+            const receivedMessage = event.data;
+            displayMessage(`Other: ${receivedMessage}`, 'other');
+        };
+
+        // 3. Error Handling
+        socket.onerror = function(error) {
+            console.error(`[error] ${error.message}`);
+            displayMessage("System: Connection error!", 'system');
+        };
+
+        // 4. Connection Closed
+        socket.onclose = function(event) {
+            if (event.wasClean) {
+                console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+            } else {
+                console.log('[close] Connection died');
+            }
+            displayMessage("System: Disconnected.", 'system');
+        };
+
+        // Function to handle sending a message
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            // Send the message to the server
+            socket.send(message);
+
+            // Display your own message in the chat box
+            displayMessage(`You: ${message}`, 'mine');
+            
+            // Clear the input
+            messageInput.value = '';
+        }
+
+        // Function to display messages in the chat box
+        function displayMessage(text, type) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(type);
+            messageElement.textContent = text;
+            chatBox.appendChild(messageElement);
+            // Scroll to the bottom to see the latest message
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
